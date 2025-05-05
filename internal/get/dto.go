@@ -13,7 +13,3 @@ type GetByCodeResponse struct {
 	Status        string    `json:"status"`
 	IsEnabled     bool      `json:"is_enabled"`
 }
-
-type GetAllResponse struct {
-	Message string `json:"message"`
-}
