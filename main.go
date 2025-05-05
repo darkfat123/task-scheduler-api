@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"task-scheduler-api/internal/create"
+	"task-scheduler-api/internal/get"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,9 +29,14 @@ func main() {
 	createUsecase := create.NewCreateTaskUsecase(createRepo)
 	createTaskHandler := create.CreateTaskHandler(createUsecase)
 
+	getTaskByCodeRepo := get.NewGetTaskByCodeRepository(conn)
+	getTaskByCodeUsecase := get.NewGetTaskByCodeUsecase(getTaskByCodeRepo)
+	getTaskByCodeHandler := get.GetTaskByCodeHandler(getTaskByCodeUsecase)
+
 	app := fiber.New()
 
 	app.Post("/tasks", createTaskHandler)
+	app.Get("/tasks/:code", getTaskByCodeHandler)
 
 	app.Listen(":8080")
 }

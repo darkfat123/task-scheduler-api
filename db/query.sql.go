@@ -64,13 +64,13 @@ func (q *Queries) DeleteTasks(ctx context.Context, id int32) error {
 	return err
 }
 
-const getTasks = `-- name: GetTasks :one
+const getTasksByCode = `-- name: GetTasksByCode :one
 SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM tasks
-WHERE id = $1 LIMIT 1
+WHERE code = $1 LIMIT 1
 `
 
-func (q *Queries) GetTasks(ctx context.Context, id int32) (Task, error) {
-	row := q.db.QueryRow(ctx, getTasks, id)
+func (q *Queries) GetTasksByCode(ctx context.Context, code pgtype.Text) (Task, error) {
+	row := q.db.QueryRow(ctx, getTasksByCode, code)
 	var i Task
 	err := row.Scan(
 		&i.ID,

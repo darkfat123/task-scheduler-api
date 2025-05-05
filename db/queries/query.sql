@@ -1,6 +1,6 @@
--- name: GetTasks :one
+-- name: GetTasksByCode :one
 SELECT * FROM tasks
-WHERE id = $1 LIMIT 1;
+WHERE code = $1 LIMIT 1;
 
 -- name: ListTasks :many
 SELECT * FROM tasks
