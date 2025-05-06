@@ -12,8 +12,8 @@ import (
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (
-  code, name, frequency_date, frequency_time, max_retries
+INSERT INTO TASKS (
+  CODE, NAME, FREQUENCY_DATE, FREQUENCY_TIME, MAX_RETRIES
 ) VALUES (
   $1, $2, $3, $4, $5
 )
@@ -55,8 +55,8 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 }
 
 const deleteTasks = `-- name: DeleteTasks :exec
-DELETE FROM tasks
-WHERE id = $1
+DELETE FROM TASKS
+WHERE ID = $1
 `
 
 func (q *Queries) DeleteTasks(ctx context.Context, id int32) error {
@@ -64,9 +64,46 @@ func (q *Queries) DeleteTasks(ctx context.Context, id int32) error {
 	return err
 }
 
+const getEnabledTask = `-- name: GetEnabledTask :many
+SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM TASKS WHERE IS_ENABLED = TRUE
+`
+
+func (q *Queries) GetEnabledTask(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.Query(ctx, getEnabledTask)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.FrequencyDate,
+			&i.FrequencyTime,
+			&i.NextRunAt,
+			&i.LastRunAt,
+			&i.MaxRetries,
+			&i.Status,
+			&i.IsEnabled,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTasksByCode = `-- name: GetTasksByCode :one
-SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM tasks
-WHERE code = $1 LIMIT 1
+SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM TASKS
+WHERE CODE = $1 LIMIT 1
 `
 
 func (q *Queries) GetTasksByCode(ctx context.Context, code pgtype.Text) (Task, error) {
@@ -90,8 +127,8 @@ func (q *Queries) GetTasksByCode(ctx context.Context, code pgtype.Text) (Task, e
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM tasks
-ORDER BY id
+SELECT id, code, name, frequency_date, frequency_time, next_run_at, last_run_at, max_retries, status, is_enabled, created_at, updated_at FROM TASKS
+ORDER BY ID
 `
 
 func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
@@ -128,10 +165,10 @@ func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
 }
 
 const updateTasks = `-- name: UpdateTasks :exec
-UPDATE tasks
-  set name = $2,
-  status = $3
-WHERE id = $1
+UPDATE TASKS
+  SET NAME = $2,
+  STATUS = $3
+WHERE ID = $1
 `
 
 type UpdateTasksParams struct {

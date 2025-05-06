@@ -4,19 +4,23 @@ import (
 	"context"
 	"log"
 	"os"
+	"task-scheduler-api/db"
 	"task-scheduler-api/internal/create"
 	"task-scheduler-api/internal/get"
 	"task-scheduler-api/internal/getall"
+	"task-scheduler-api/jobs"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("cannot load env.")
 	}
+
 	ctx := context.Background()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
@@ -26,23 +30,34 @@ func main() {
 	}
 	defer conn.Close()
 
+	// Create Task
 	createRepo := create.NewCreateTaskRepository(conn)
 	createUsecase := create.NewCreateTaskUsecase(createRepo)
-	createTaskHandler := create.CreateTaskHandler(createUsecase)
+	createHandler := create.CreateTaskHandler(createUsecase)
 
-	getTaskByCodeRepo := get.NewGetTaskByCodeRepository(conn)
-	getTaskByCodeUsecase := get.NewGetTaskByCodeUsecase(getTaskByCodeRepo)
-	getTaskByCodeHandler := get.GetTaskByCodeHandler(getTaskByCodeUsecase)
+	// Get Task By Code
+	getByCodeRepo := get.NewGetTaskByCodeRepository(conn)
+	getByCodeUsecase := get.NewGetTaskByCodeUsecase(getByCodeRepo)
+	getByCodeHandler := get.GetTaskByCodeHandler(getByCodeUsecase)
 
-	getAllTaskRepo := getall.NewGetAllTaskRepository(conn)
-	getAllTaskUsecase := getall.NewGetAllTaskUsecase(getAllTaskRepo)
-	getAllTaskHandler := getall.GetAllTaskHandler(getAllTaskUsecase)
+	// Get All Tasks
+	getAllRepo := getall.NewGetAllTaskRepository(conn)
+	getAllUsecase := getall.NewGetAllTaskUsecase(getAllRepo)
+	getAllHandler := getall.GetAllTaskHandler(getAllUsecase)
 
+	// Fiber setup
 	app := fiber.New()
+	app.Post("/tasks", createHandler)
+	app.Get("/tasks/:code", getByCodeHandler)
+	app.Get("/tasksList", getAllHandler)
 
-	app.Post("/tasks", createTaskHandler)
-	app.Get("/tasks/:code", getTaskByCodeHandler)
-	app.Get("/tasksList", getAllTaskHandler)
+	// Cron setup
+	queries := db.New(conn)
+	c := cron.New()
+	jobs.ScheduleAllJobs(c, queries, ctx)
+	c.Start()
 
-	app.Listen(":8080")
+	if err := app.Listen(":8080"); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
